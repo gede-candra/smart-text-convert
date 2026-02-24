@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Text Convert</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --panel: #fffdf8;
+      --ink: #1d1c1a;
+      --muted: #69645c;
+      --accent: #0a7f5a;
+      --accent-2: #095f44;
+      --line: #d9d2c4;
+      --code-bg: #f0ece3;
+      --sidebar-bg: #ece4d4;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 20% 20%, #fffdf7, var(--bg));
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .layout {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .sidebar {
+      border: 1px solid var(--line);
+      background: var(--sidebar-bg);
+      border-radius: 14px;
+      padding: 14px;
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+    }
+
+    .sidebar h2 {
+      margin: 0;
+      font-size: 1.08rem;
+      letter-spacing: 0.2px;
+    }
+
+    .brand-sub {
+      margin: 6px 0 14px;
+      font-size: 0.84rem;
+      color: #575147;
+      line-height: 1.4;
+    }
+
+    .menu-title {
+      margin: 0 0 8px;
+      font-size: 0.86rem;
+      color: #5d574d;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+    }
+
+    .menu {
+      display: grid;
+      gap: 8px;
+    }
+
+    .menu button {
+      border: 1px solid transparent;
+      border-radius: 9px;
+      padding: 10px 12px;
+      text-align: left;
+      background: #f8f3e8;
+      color: #3f3a33;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .menu button.active {
+      background: #fff;
+      border-color: var(--line);
+      color: var(--accent-2);
+    }
+
+    .content {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      resize: vertical;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.95rem;
+      background: #fff;
+    }
+
+    .actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-main {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-main:hover {
+      background: var(--accent-2);
+    }
+
+    .btn-ghost {
+      background: #efe8da;
+      color: #3f3a33;
+    }
+
+    .result {
+      margin-top: 20px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #f8f4ec;
+      font-size: 0.9rem;
+      color: #4d483f;
+    }
+
+    code {
+      display: block;
+      padding: 12px;
+      background: var(--code-bg);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.92rem;
+      white-space: pre;
+      overflow: auto;
+      max-height: 240px;
+    }
+
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      margin: 14px 0;
+    }
+
+    .opt {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.92rem;
+      color: #3f3a33;
+    }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    .subnote {
+      margin-top: 18px;
+    }
+
+    .subnote p {
+      margin: 0 0 8px;
+      font-size: 0.9rem;
+      color: #4d483f;
+    }
+
+    .stats {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .stat-item {
+      border: 1px solid var(--line);
+      background: #f8f4ec;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      color: #4d483f;
+    }
+
+    @media (max-width: 880px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
+
+      .menu {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <aside class="sidebar">
+      <h2>Smart Text Convert</h2>
+      <p class="brand-sub">Toolkit cepat untuk command shell, formatting list, dan pembersihan teks.</p>
+      <h3 class="menu-title">Menu Fitur</h3>
+      <div class="menu">
+        <button class="menu-item active" data-target="panel-find">Find: Kecualikan</button>
+        <button class="menu-item" data-target="panel-find-inverse">Find: Pilih Saja</button>
+        <button class="menu-item" data-target="panel-format">Formatter List</button>
+        <button class="menu-item" data-target="panel-dedupe">Duplikat Baris</button>
+      </div>
+    </aside>
+
+    <section class="content">
+      <article class="panel active" id="panel-find">
+        <h1>Find Command: Kecualikan Daftar</h1>
+        <p>
+          Masukkan nama file per baris. Tool ini akan generate command `find` untuk
+          menampilkan (`-print`), menghitung jumlah (`| wc -l`), dan menghapus (`-delete`)
+          file selain nama yang Anda tulis.
+        </p>
+
+        <label for="findNames">Nama file (satu baris satu nama)</label>
+        <textarea id="findNames" placeholder="a&#10;b&#10;c"></textarea>
+
+        <div class="actions">
+          <button id="findConvertBtn" class="btn-main">Convert</button>
+          <button id="findSampleBtn" class="btn-ghost">Isi Contoh</button>
+        </div>
+
+        <section class="result">
+          <div class="box">
+            <div class="box-header">
+              <span>Command preview</span>
+              <button id="copyPrint" class="btn-ghost">Copy -print</button>
+            </div>
+            <code id="cmdPrint">find . -maxdepth 1 -type f -print</code>
+          </div>
+
+          <div class="box">
+            <div class="box-header">
+              <span>Command delete</span>
+              <button id="copyDelete" class="btn-ghost">Copy -delete</button>
+            </div>
+            <code id="cmdDelete">find . -maxdepth 1 -type f -delete</code>
+          </div>
+
+          <div class="box">
+            <div class="box-header">
+              <span>Command count</span>
+              <button id="copyCount" class="btn-ghost">Copy count</button>
+            </div>
+            <code id="cmdCount">find . -maxdepth 1 -type f -print | wc -l</code>
+          </div>
+        </section>
+
+        <section class="subnote">
+          <p><strong>Opsi jika line sangat banyak (pakai file txt):</strong></p>
+          <div class="box">
+            <div class="box-header">
+              <span>Contoh dengan `keep.txt` (1 nama file per baris)</span>
+            </div>
+            <code># lihat file yang akan terpilih
+find . -maxdepth 1 -type f -printf '%f\n' | grep -Fvx -f keep.txt
+
+# hitung jumlah file
+find . -maxdepth 1 -type f -printf '%f\n' | grep -Fvx -f keep.txt | wc -l
+
+# hapus file selain yang ada di keep.txt
+find . -maxdepth 1 -type f -printf '%f\0' | grep -zFvx -f keep.txt | xargs -0 -r -I{} rm -- "./{}"</code>
+          </div>
+        </section>
+
+        <div class="hint">
+          Catatan: nama file otomatis di-escape jika mengandung tanda petik satu.
+        </div>
+      </article>
+
+      <article class="panel" id="panel-find-inverse">
+        <h1>Find Command: Pilih Hanya Daftar</h1>
+        <p>
+          Masukkan nama file per baris. Tool ini akan generate command `find` untuk
+          memilih hanya file yang Anda tulis (kebalikan dari fitur Find Command utama).
+        </p>
+
+        <label for="inverseNames">Nama file (satu baris satu nama)</label>
+        <textarea id="inverseNames" placeholder="a&#10;b&#10;c"></textarea>
+
+        <div class="actions">
+          <button id="inverseConvertBtn" class="btn-main">Convert</button>
+          <button id="inverseSampleBtn" class="btn-ghost">Isi Contoh</button>
+        </div>
+
+        <section class="result">
+          <div class="box">
+            <div class="box-header">
+              <span>Command preview</span>
+              <button id="copyInversePrint" class="btn-ghost">Copy -print</button>
+            </div>
+            <code id="inverseCmdPrint">find . -maxdepth 1 -type f -false -print</code>
+          </div>
+
+          <div class="box">
+            <div class="box-header">
+              <span>Command delete</span>
+              <button id="copyInverseDelete" class="btn-ghost">Copy -delete</button>
+            </div>
+            <code id="inverseCmdDelete">find . -maxdepth 1 -type f -false -delete</code>
+          </div>
+
+          <div class="box">
+            <div class="box-header">
+              <span>Command count</span>
+              <button id="copyInverseCount" class="btn-ghost">Copy count</button>
+            </div>
+            <code id="inverseCmdCount">find . -maxdepth 1 -type f -false -print | wc -l</code>
+          </div>
+        </section>
+
+        <section class="subnote">
+          <p><strong>Opsi jika line sangat banyak (pakai file txt):</strong></p>
+          <div class="box">
+            <div class="box-header">
+              <span>Contoh dengan `pick.txt` (1 nama file per baris)</span>
+            </div>
+            <code># lihat file yang masuk daftar pick
+find . -maxdepth 1 -type f -printf '%f\n' | grep -Fx -f pick.txt
+
+# hitung jumlah file yang masuk daftar pick
+find . -maxdepth 1 -type f -printf '%f\n' | grep -Fx -f pick.txt | wc -l
+
+# hapus hanya file yang ada di pick.txt
+find . -maxdepth 1 -type f -printf '%f\0' | grep -zFx -f pick.txt | xargs -0 -r -I{} rm -- "./{}"</code>
+          </div>
+        </section>
+
+        <div class="hint">
+          Catatan: jika input kosong, command dibuat aman dengan `-false` (tidak memilih file).
+        </div>
+      </article>
+
+      <article class="panel" id="panel-format">
+        <h1>Formatter List Teks</h1>
+        <p>
+          Masukkan nilai per baris, lalu tentukan pemisah dan pembungkus item dengan
+          checkbox di bawah.
+        </p>
+
+        <label for="formatNames">Input list (satu baris satu item)</label>
+        <textarea id="formatNames" placeholder="a&#10;b&#10;c&#10;d"></textarea>
+
+        <div class="options">
+          <label class="opt">
+            <input id="sepSpace" type="checkbox" />
+            spasi
+          </label>
+          <label class="opt">
+            <input id="sepComma" type="checkbox" checked />
+            ,
+          </label>
+          <label class="opt">
+            <input id="wrapDoubleQuote" type="checkbox" />
+            ""
+          </label>
+          <label class="opt">
+            <input id="wrapSingleQuote" type="checkbox" />
+            ''
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="formatConvertBtn" class="btn-main">Format</button>
+          <button id="formatSampleBtn" class="btn-ghost">Isi Contoh</button>
+        </div>
+
+        <section class="result">
+          <div class="box">
+            <div class="box-header">
+              <span>Hasil format</span>
+              <button id="copyFormatted" class="btn-ghost">Copy format</button>
+            </div>
+            <code id="formattedOutput">a, b, c, d</code>
+          </div>
+        </section>
+      </article>
+
+      <article class="panel" id="panel-dedupe">
+        <h1>Pembersih Duplikat Baris</h1>
+        <p>
+          Masukkan data per baris, lalu tool ini akan menghapus baris duplikat dan
+          mempertahankan kemunculan pertama.
+        </p>
+
+        <label for="dedupeNames">Input baris</label>
+        <textarea id="dedupeNames" placeholder="a&#10;b&#10;a&#10;c&#10;b"></textarea>
+
+        <div class="actions">
+          <button id="dedupeConvertBtn" class="btn-main">Proses</button>
+          <button id="dedupeSampleBtn" class="btn-ghost">Isi Contoh</button>
+        </div>
+
+        <section class="result">
+          <div class="box">
+            <div class="box-header">
+              <span>Hasil tanpa duplikat</span>
+              <button id="copyDedupe" class="btn-ghost">Copy hasil</button>
+            </div>
+            <code id="dedupeOutput">a
+b
+c</code>
+          </div>
+        </section>
+
+        <div class="stats">
+          <div class="stat-item">Jumlah baris awal: <strong id="dedupeInputCount">0</strong></div>
+          <div class="stat-item">Jumlah baris setelah convert: <strong id="dedupeOutputCount">0</strong></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    function shellQuoteSingle(value) {
+      return value.replace(/'/g, "'\\''");
+    }
+
+    function buildFindCommands(rawText) {
+      const names = rawText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      const base = "find . -maxdepth 1 -type f";
+
+      if (names.length === 0) {
+        return {
+          print: `${base} -print`,
+          del: `${base} -delete`,
+          count: `${base} -print | wc -l`,
+        };
+      }
+
+      const excludes = names
+        .map((name) => `! -name '${shellQuoteSingle(name)}'`)
+        .join(" ");
+
+      return {
+        print: `${base} ${excludes} -print`,
+        del: `${base} ${excludes} -delete`,
+        count: `${base} ${excludes} -print | wc -l`,
+      };
+    }
+
+    function buildFindInverseCommands(rawText) {
+      const names = rawText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      const base = "find . -maxdepth 1 -type f";
+
+      if (names.length === 0) {
+        return {
+          print: `${base} -false -print`,
+          del: `${base} -false -delete`,
+          count: `${base} -false -print | wc -l`,
+        };
+      }
+
+      const includes = names
+        .map((name) => `-name '${shellQuoteSingle(name)}'`)
+        .join(" -o ");
+
+      const selector = `\\( ${includes} \\)`;
+
+      return {
+        print: `${base} ${selector} -print`,
+        del: `${base} ${selector} -delete`,
+        count: `${base} ${selector} -print | wc -l`,
+      };
+    }
+
+    function buildFormattedOutput(rawText, options) {
+      const names = rawText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      if (names.length === 0) {
+        return "";
+      }
+
+      let quote = "";
+      if (options.wrapDoubleQuote) {
+        quote = '"';
+      } else if (options.wrapSingleQuote) {
+        quote = "'";
+      }
+
+      const wrapped = names.map((name) => {
+        if (quote === '"') {
+          return `"${name.replace(/"/g, '\\"')}"`;
+        }
+        if (quote === "'") {
+          return `'${name.replace(/'/g, "\\'")}'`;
+        }
+        return name;
+      });
+
+      let separator = "\n";
+      if (options.sepComma && options.sepSpace) {
+        separator = ", ";
+      } else if (options.sepComma) {
+        separator = ",";
+      } else if (options.sepSpace) {
+        separator = " ";
+      }
+
+      return wrapped.join(separator);
+    }
+
+    function buildUniqueLines(rawText) {
+      const lines = rawText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      const seen = new Set();
+      const unique = [];
+
+      lines.forEach((line) => {
+        if (!seen.has(line)) {
+          seen.add(line);
+          unique.push(line);
+        }
+      });
+
+      return unique.join("\n");
+    }
+
+    function countNonEmptyLines(rawText) {
+      return rawText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean).length;
+    }
+
+    async function copyText(text) {
+      await navigator.clipboard.writeText(text);
+    }
+
+    const menuItems = document.querySelectorAll(".menu-item");
+    const panels = document.querySelectorAll(".panel");
+
+    menuItems.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.target;
+
+        menuItems.forEach((item) => item.classList.remove("active"));
+        panels.forEach((panel) => panel.classList.remove("active"));
+
+        btn.classList.add("active");
+        document.getElementById(target).classList.add("active");
+      });
+    });
+
+    const findNamesEl = document.getElementById("findNames");
+    const cmdPrintEl = document.getElementById("cmdPrint");
+    const cmdDeleteEl = document.getElementById("cmdDelete");
+    const cmdCountEl = document.getElementById("cmdCount");
+
+    function renderFind() {
+      const { print, del, count } = buildFindCommands(findNamesEl.value);
+      cmdPrintEl.textContent = print;
+      cmdDeleteEl.textContent = del;
+      cmdCountEl.textContent = count;
+    }
+
+    document.getElementById("findConvertBtn").addEventListener("click", renderFind);
+    document.getElementById("findSampleBtn").addEventListener("click", () => {
+      findNamesEl.value = "a\nb\nc\nd";
+      renderFind();
+    });
+    findNamesEl.addEventListener("input", renderFind);
+
+    document.getElementById("copyPrint").addEventListener("click", async () => {
+      try {
+        await copyText(cmdPrintEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    document.getElementById("copyDelete").addEventListener("click", async () => {
+      try {
+        await copyText(cmdDeleteEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    document.getElementById("copyCount").addEventListener("click", async () => {
+      try {
+        await copyText(cmdCountEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    const inverseNamesEl = document.getElementById("inverseNames");
+    const inverseCmdPrintEl = document.getElementById("inverseCmdPrint");
+    const inverseCmdDeleteEl = document.getElementById("inverseCmdDelete");
+    const inverseCmdCountEl = document.getElementById("inverseCmdCount");
+
+    function renderFindInverse() {
+      const { print, del, count } = buildFindInverseCommands(inverseNamesEl.value);
+      inverseCmdPrintEl.textContent = print;
+      inverseCmdDeleteEl.textContent = del;
+      inverseCmdCountEl.textContent = count;
+    }
+
+    document.getElementById("inverseConvertBtn").addEventListener("click", renderFindInverse);
+    document.getElementById("inverseSampleBtn").addEventListener("click", () => {
+      inverseNamesEl.value = "a\nb\nc";
+      renderFindInverse();
+    });
+    inverseNamesEl.addEventListener("input", renderFindInverse);
+
+    document.getElementById("copyInversePrint").addEventListener("click", async () => {
+      try {
+        await copyText(inverseCmdPrintEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    document.getElementById("copyInverseDelete").addEventListener("click", async () => {
+      try {
+        await copyText(inverseCmdDeleteEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    document.getElementById("copyInverseCount").addEventListener("click", async () => {
+      try {
+        await copyText(inverseCmdCountEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    const formatNamesEl = document.getElementById("formatNames");
+    const formattedOutputEl = document.getElementById("formattedOutput");
+    const sepSpaceEl = document.getElementById("sepSpace");
+    const sepCommaEl = document.getElementById("sepComma");
+    const wrapDoubleQuoteEl = document.getElementById("wrapDoubleQuote");
+    const wrapSingleQuoteEl = document.getElementById("wrapSingleQuote");
+
+    function renderFormat() {
+      const formatted = buildFormattedOutput(formatNamesEl.value, {
+        sepSpace: sepSpaceEl.checked,
+        sepComma: sepCommaEl.checked,
+        wrapDoubleQuote: wrapDoubleQuoteEl.checked,
+        wrapSingleQuote: wrapSingleQuoteEl.checked,
+      });
+
+      formattedOutputEl.textContent = formatted || "(kosong)";
+    }
+
+    document.getElementById("formatConvertBtn").addEventListener("click", renderFormat);
+    document.getElementById("formatSampleBtn").addEventListener("click", () => {
+      formatNamesEl.value = "a\nb\nc\nd";
+      renderFormat();
+    });
+
+    formatNamesEl.addEventListener("input", renderFormat);
+    sepSpaceEl.addEventListener("change", renderFormat);
+    sepCommaEl.addEventListener("change", renderFormat);
+
+    wrapDoubleQuoteEl.addEventListener("change", () => {
+      if (wrapDoubleQuoteEl.checked) {
+        wrapSingleQuoteEl.checked = false;
+      }
+      renderFormat();
+    });
+
+    wrapSingleQuoteEl.addEventListener("change", () => {
+      if (wrapSingleQuoteEl.checked) {
+        wrapDoubleQuoteEl.checked = false;
+      }
+      renderFormat();
+    });
+
+    document.getElementById("copyFormatted").addEventListener("click", async () => {
+      try {
+        await copyText(formattedOutputEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    const dedupeNamesEl = document.getElementById("dedupeNames");
+    const dedupeOutputEl = document.getElementById("dedupeOutput");
+    const dedupeInputCountEl = document.getElementById("dedupeInputCount");
+    const dedupeOutputCountEl = document.getElementById("dedupeOutputCount");
+
+    function renderDedupe() {
+      const unique = buildUniqueLines(dedupeNamesEl.value);
+      dedupeOutputEl.textContent = unique || "(kosong)";
+      dedupeInputCountEl.textContent = String(countNonEmptyLines(dedupeNamesEl.value));
+      dedupeOutputCountEl.textContent = String(unique ? unique.split("\n").length : 0);
+    }
+
+    document.getElementById("dedupeConvertBtn").addEventListener("click", renderDedupe);
+    document.getElementById("dedupeSampleBtn").addEventListener("click", () => {
+      dedupeNamesEl.value = "a\nb\na\nc\nb";
+      renderDedupe();
+    });
+    dedupeNamesEl.addEventListener("input", renderDedupe);
+
+    document.getElementById("copyDedupe").addEventListener("click", async () => {
+      try {
+        await copyText(dedupeOutputEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    renderFind();
+    renderFindInverse();
+    renderFormat();
+    renderDedupe();
+  </script>
+</body>
+</html>
