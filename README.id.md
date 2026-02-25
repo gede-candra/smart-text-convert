@@ -50,6 +50,23 @@ Tambahan:
 - menampilkan jumlah baris awal
 - menampilkan jumlah baris setelah proses
 
+### 5. Perbandingan Baris yang Tidak Ada
+Membandingkan dua blok teks dan menampilkan baris yang tidak ada di masing-masing sisi.
+
+Output yang tersedia:
+- baris yang ada di Teks A tapi tidak ada di Teks B
+- baris yang ada di Teks B tapi tidak ada di Teks A
+
+Tambahan:
+- menampilkan jumlah baris unik untuk tiap sisi
+- menampilkan jumlah baris yang tidak ada untuk tiap sisi
+- tombol copy pada tiap hasil perbandingan
+
+Perilaku perbandingan:
+- perbandingan berbasis baris unik (duplikat diabaikan)
+- setiap baris di-trim spasi kiri/kanan
+- baris kosong diabaikan
+
 ## UX yang Sudah Dioptimalkan
 
 - Sidebar menu untuk pindah fitur dengan cepat.

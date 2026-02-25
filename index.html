@@ -247,6 +247,12 @@
       color: #4d483f;
     }
 
+    .compare-inputs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
     @media (max-width: 880px) {
       .layout {
         grid-template-columns: 1fr;
@@ -259,6 +265,10 @@
       .menu {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+
+      .compare-inputs {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -266,13 +276,14 @@
   <main class="layout">
     <aside class="sidebar">
       <h2>Smart Text Convert</h2>
-      <p class="brand-sub">Toolkit cepat untuk command shell, formatting list, dan pembersihan teks.</p>
+      <p class="brand-sub">Toolkit cepat untuk command shell, formatting list, pembersihan, dan perbandingan teks.</p>
       <h3 class="menu-title">Menu Fitur</h3>
       <div class="menu">
         <button class="menu-item active" data-target="panel-find">Find: Kecualikan</button>
         <button class="menu-item" data-target="panel-find-inverse">Find: Pilih Saja</button>
         <button class="menu-item" data-target="panel-format">Formatter List</button>
         <button class="menu-item" data-target="panel-dedupe">Duplikat Baris</button>
+        <button class="menu-item" data-target="panel-compare">Bandingkan Baris</button>
       </div>
     </aside>
 
@@ -481,19 +492,72 @@ c</code>
           <div class="stat-item">Jumlah baris setelah convert: <strong id="dedupeOutputCount">0</strong></div>
         </div>
       </article>
+
+      <article class="panel" id="panel-compare">
+        <h1>Perbandingan Baris Teks</h1>
+        <p>
+          Masukkan dua daftar teks. Tool ini menampilkan baris yang hanya ada di
+          Teks A atau hanya ada di Teks B.
+        </p>
+
+        <div class="compare-inputs">
+          <div>
+            <label for="compareLeft">Teks A</label>
+            <textarea id="compareLeft" placeholder="a&#10;b&#10;c"></textarea>
+          </div>
+          <div>
+            <label for="compareRight">Teks B</label>
+            <textarea id="compareRight" placeholder="b&#10;c&#10;d"></textarea>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="compareConvertBtn" class="btn-main">Bandingkan</button>
+          <button id="compareSampleBtn" class="btn-ghost">Isi Contoh</button>
+        </div>
+
+        <section class="result">
+          <div class="box">
+            <div class="box-header">
+              <span>Ada di Teks A, tidak ada di Teks B</span>
+              <button id="copyMissingInB" class="btn-ghost">Copy hasil</button>
+            </div>
+            <code id="compareMissingInB">(tidak ada)</code>
+          </div>
+
+          <div class="box">
+            <div class="box-header">
+              <span>Ada di Teks B, tidak ada di Teks A</span>
+              <button id="copyMissingInA" class="btn-ghost">Copy hasil</button>
+            </div>
+            <code id="compareMissingInA">(tidak ada)</code>
+          </div>
+        </section>
+
+        <div class="stats">
+          <div class="stat-item">Jumlah unik Teks A: <strong id="compareACount">0</strong></div>
+          <div class="stat-item">Jumlah unik Teks B: <strong id="compareBCount">0</strong></div>
+          <div class="stat-item">Tidak ada di Teks B: <strong id="compareMissingInBCount">0</strong></div>
+          <div class="stat-item">Tidak ada di Teks A: <strong id="compareMissingInACount">0</strong></div>
+        </div>
+      </article>
     </section>
   </main>
 
   <script>
+    function parseNonEmptyLines(rawText) {
+      return rawText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    }
+
     function shellQuoteSingle(value) {
       return value.replace(/'/g, "'\\''");
     }
 
     function buildFindCommands(rawText) {
-      const names = rawText
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
+      const names = parseNonEmptyLines(rawText);
 
       const base = "find . -maxdepth 1 -type f";
 
@@ -517,10 +581,7 @@ c</code>
     }
 
     function buildFindInverseCommands(rawText) {
-      const names = rawText
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
+      const names = parseNonEmptyLines(rawText);
 
       const base = "find . -maxdepth 1 -type f";
 
@@ -546,10 +607,7 @@ c</code>
     }
 
     function buildFormattedOutput(rawText, options) {
-      const names = rawText
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
+      const names = parseNonEmptyLines(rawText);
 
       if (names.length === 0) {
         return "";
@@ -585,10 +643,7 @@ c</code>
     }
 
     function buildUniqueLines(rawText) {
-      const lines = rawText
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
+      const lines = parseNonEmptyLines(rawText);
 
       const seen = new Set();
       const unique = [];
@@ -604,10 +659,22 @@ c</code>
     }
 
     function countNonEmptyLines(rawText) {
-      return rawText
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean).length;
+      return parseNonEmptyLines(rawText).length;
+    }
+
+    function compareMissingLines(leftRawText, rightRawText) {
+      const leftSet = new Set(parseNonEmptyLines(leftRawText));
+      const rightSet = new Set(parseNonEmptyLines(rightRawText));
+
+      const missingInRight = [...leftSet].filter((line) => !rightSet.has(line));
+      const missingInLeft = [...rightSet].filter((line) => !leftSet.has(line));
+
+      return {
+        leftUniqueCount: leftSet.size,
+        rightUniqueCount: rightSet.size,
+        missingInRight,
+        missingInLeft,
+      };
     }
 
     async function copyText(text) {
@@ -792,10 +859,59 @@ c</code>
       }
     });
 
+    const compareLeftEl = document.getElementById("compareLeft");
+    const compareRightEl = document.getElementById("compareRight");
+    const compareMissingInBEl = document.getElementById("compareMissingInB");
+    const compareMissingInAEl = document.getElementById("compareMissingInA");
+    const compareACountEl = document.getElementById("compareACount");
+    const compareBCountEl = document.getElementById("compareBCount");
+    const compareMissingInBCountEl = document.getElementById("compareMissingInBCount");
+    const compareMissingInACountEl = document.getElementById("compareMissingInACount");
+
+    function renderCompare() {
+      const { leftUniqueCount, rightUniqueCount, missingInRight, missingInLeft } = compareMissingLines(
+        compareLeftEl.value,
+        compareRightEl.value
+      );
+
+      compareMissingInBEl.textContent = missingInRight.join("\n") || "(tidak ada)";
+      compareMissingInAEl.textContent = missingInLeft.join("\n") || "(tidak ada)";
+      compareACountEl.textContent = String(leftUniqueCount);
+      compareBCountEl.textContent = String(rightUniqueCount);
+      compareMissingInBCountEl.textContent = String(missingInRight.length);
+      compareMissingInACountEl.textContent = String(missingInLeft.length);
+    }
+
+    document.getElementById("compareConvertBtn").addEventListener("click", renderCompare);
+    document.getElementById("compareSampleBtn").addEventListener("click", () => {
+      compareLeftEl.value = "a\nb\nc\ne";
+      compareRightEl.value = "b\nc\nd";
+      renderCompare();
+    });
+    compareLeftEl.addEventListener("input", renderCompare);
+    compareRightEl.addEventListener("input", renderCompare);
+
+    document.getElementById("copyMissingInB").addEventListener("click", async () => {
+      try {
+        await copyText(compareMissingInBEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    document.getElementById("copyMissingInA").addEventListener("click", async () => {
+      try {
+        await copyText(compareMissingInAEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
     renderFind();
     renderFindInverse();
     renderFormat();
     renderDedupe();
+    renderCompare();
   </script>
 </body>
 </html>

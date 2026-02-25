@@ -50,6 +50,23 @@ Extra:
 - shows input line count
 - shows output line count
 
+### 5. Compare Missing Lines
+Compares two text blocks and shows which lines are missing on each side.
+
+Available outputs:
+- lines present in Text A but missing in Text B
+- lines present in Text B but missing in Text A
+
+Extra:
+- shows unique line count for each side
+- shows missing line count for each side
+- copy button for each comparison result
+
+Comparison behavior:
+- compares by unique lines only (duplicates are ignored)
+- trims leading/trailing spaces per line
+- ignores empty lines
+
 ## UX Highlights
 
 - Sidebar navigation for quick feature switching.
