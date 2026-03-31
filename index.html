@@ -253,6 +253,31 @@
       gap: 12px;
     }
 
+    .field-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 210px;
+      color: #3f3a33;
+      font-size: 0.92rem;
+    }
+
+    .field select,
+    .field input {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 0.92rem;
+      background: #fff;
+      color: #2b2721;
+    }
+
     @media (max-width: 880px) {
       .layout {
         grid-template-columns: 1fr;
@@ -276,7 +301,7 @@
   <main class="layout">
     <aside class="sidebar">
       <h2>Smart Text Convert</h2>
-      <p class="brand-sub">Toolkit cepat untuk command shell, formatting list, pembersihan, dan perbandingan teks.</p>
+      <p class="brand-sub">Toolkit cepat untuk command shell, formatting list, pembersihan, perbandingan, dan hashing teks.</p>
       <h3 class="menu-title">Menu Fitur</h3>
       <div class="menu">
         <button class="menu-item active" data-target="panel-find">Find: Kecualikan</button>
@@ -284,6 +309,7 @@
         <button class="menu-item" data-target="panel-format">Formatter List</button>
         <button class="menu-item" data-target="panel-dedupe">Duplikat Baris</button>
         <button class="menu-item" data-target="panel-compare">Bandingkan Baris</button>
+        <button class="menu-item" data-target="panel-hash">Hashing Password</button>
       </div>
     </aside>
 
@@ -541,9 +567,71 @@ c</code>
           <div class="stat-item">Tidak ada di Teks A: <strong id="compareMissingInACount">0</strong></div>
         </div>
       </article>
+
+      <article class="panel" id="panel-hash">
+        <h1>Convert Teks ke Hash Password</h1>
+        <p>
+          Masukkan teks untuk generate hash password. Tool ini juga menyiapkan command PHP CLI
+          yang lebih umum untuk dipakai di berbagai project.
+        </p>
+
+        <label for="hashText">Teks</label>
+        <textarea id="hashText" placeholder="contohPassword123!"></textarea>
+
+        <div class="field-group">
+          <label class="field" for="hashDriver">
+            Tipe Hash
+            <select id="hashDriver">
+              <option value="bcrypt">bcrypt</option>
+              <option value="argon2id">argon2id</option>
+            </select>
+          </label>
+          <label class="field" for="bcryptRounds">
+            Bcrypt Rounds (jika bcrypt)
+            <input id="bcryptRounds" type="number" min="4" max="31" value="12" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="hashConvertBtn" class="btn-main">Generate</button>
+          <button id="hashSampleBtn" class="btn-ghost">Isi Contoh</button>
+        </div>
+
+        <section class="result">
+          <div class="box">
+            <div class="box-header">
+              <span>Hasil Hash Langsung (bcrypt)</span>
+              <button id="copyHashDirect" class="btn-ghost">Copy hash</button>
+            </div>
+            <code id="hashDirect">(klik Generate)</code>
+          </div>
+
+          <div class="box">
+            <div class="box-header">
+              <span>Command `password_hash` (PHP CLI)</span>
+              <button id="copyHashCmd" class="btn-ghost">Copy command</button>
+            </div>
+            <code id="hashCmd">(klik Generate)</code>
+          </div>
+
+          <div class="box">
+            <div class="box-header">
+              <span>Snippet PHP</span>
+              <button id="copyHashSnippet" class="btn-ghost">Copy snippet</button>
+            </div>
+            <code id="hashSnippet">(klik Generate)</code>
+          </div>
+        </section>
+
+        <div class="hint">
+          Catatan: hasil hash akan berbeda setiap generate karena password hash memakai salt acak.
+          Hash langsung di browser hanya untuk tipe `bcrypt`.
+        </div>
+      </article>
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
   <script>
     function parseNonEmptyLines(rawText) {
       return rawText
@@ -679,6 +767,59 @@ c</code>
 
     async function copyText(text) {
       await navigator.clipboard.writeText(text);
+    }
+
+    function phpSingleQuotedString(value) {
+      return `'${value
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")}'`;
+    }
+
+    function buildHashCommand(passwordText, driver, bcryptRoundsInput) {
+      const passwordPhpLiteral = phpSingleQuotedString(passwordText);
+      const clampedRounds = Math.min(31, Math.max(4, Number(bcryptRoundsInput) || 12));
+      const algorithm = driver === "bcrypt" ? "PASSWORD_BCRYPT" : "PASSWORD_ARGON2ID";
+      const options = driver === "bcrypt"
+        ? `, ['cost' => ${clampedRounds}]`
+        : `, ['memory_cost' => 65536, 'time_cost' => 4, 'threads' => 1]`;
+      const script = `$password = ${passwordPhpLiteral}; echo password_hash($password, ${algorithm}${options}) . PHP_EOL;`;
+
+      return `php -r '${shellQuoteSingle(script)}'`;
+    }
+
+    function buildHashSnippet(passwordText, driver, bcryptRoundsInput) {
+      const passwordLiteral = phpSingleQuotedString(passwordText);
+      const clampedRounds = Math.min(31, Math.max(4, Number(bcryptRoundsInput) || 12));
+      const algorithm = driver === "bcrypt" ? "PASSWORD_BCRYPT" : "PASSWORD_ARGON2ID";
+      const options = driver === "bcrypt"
+        ? `['cost' => ${clampedRounds}]`
+        : `['memory_cost' => 65536, 'time_cost' => 4, 'threads' => 1]`;
+
+      return `password_hash(${passwordLiteral}, ${algorithm}, ${options});`;
+    }
+
+    function normalizeBcryptHashPrefix(hash) {
+      if (typeof hash === "string" && hash.startsWith("$2a$")) {
+        return `$2y$${hash.slice(4)}`;
+      }
+      return hash;
+    }
+
+    function hashBcryptInBrowser(passwordText, rounds) {
+      return new Promise((resolve, reject) => {
+        if (!window.dcodeIO || !window.dcodeIO.bcrypt) {
+          reject(new Error("bcryptjs tidak tersedia"));
+          return;
+        }
+
+        window.dcodeIO.bcrypt.hash(passwordText, rounds, (err, hash) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(normalizeBcryptHashPrefix(hash));
+        });
+      });
     }
 
     const menuItems = document.querySelectorAll(".menu-item");
@@ -907,11 +1048,89 @@ c</code>
       }
     });
 
+    const hashTextEl = document.getElementById("hashText");
+    const hashDirectEl = document.getElementById("hashDirect");
+    const hashCmdEl = document.getElementById("hashCmd");
+    const hashSnippetEl = document.getElementById("hashSnippet");
+    const hashDriverEl = document.getElementById("hashDriver");
+    const bcryptRoundsEl = document.getElementById("bcryptRounds");
+    let directHashRenderToken = 0;
+
+    async function renderHash() {
+      const token = ++directHashRenderToken;
+      const sourceText = hashTextEl.value;
+      const driver = hashDriverEl.value;
+      const rounds = Math.min(31, Math.max(4, Number(bcryptRoundsEl.value) || 12));
+      bcryptRoundsEl.disabled = driver !== "bcrypt";
+
+      hashCmdEl.textContent = buildHashCommand(sourceText, driver, bcryptRoundsEl.value);
+      hashSnippetEl.textContent = buildHashSnippet(sourceText, driver, bcryptRoundsEl.value);
+
+      if (!sourceText) {
+        hashDirectEl.textContent = "(kosong)";
+        return;
+      }
+
+      if (driver !== "bcrypt") {
+        hashDirectEl.textContent = "(langsung di browser hanya tersedia untuk bcrypt)";
+        return;
+      }
+
+      hashDirectEl.textContent = "Memproses...";
+      try {
+        const hash = await hashBcryptInBrowser(sourceText, rounds);
+        if (token !== directHashRenderToken) {
+          return;
+        }
+        hashDirectEl.textContent = hash;
+      } catch (err) {
+        if (token !== directHashRenderToken) {
+          return;
+        }
+        hashDirectEl.textContent = "(gagal generate hash langsung)";
+        console.error(err);
+      }
+    }
+
+    document.getElementById("hashConvertBtn").addEventListener("click", renderHash);
+    document.getElementById("hashSampleBtn").addEventListener("click", () => {
+      hashTextEl.value = "contohPassword123!";
+      renderHash();
+    });
+    hashTextEl.addEventListener("input", renderHash);
+    hashDriverEl.addEventListener("change", renderHash);
+    bcryptRoundsEl.addEventListener("input", renderHash);
+
+    document.getElementById("copyHashDirect").addEventListener("click", async () => {
+      try {
+        await copyText(hashDirectEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    document.getElementById("copyHashCmd").addEventListener("click", async () => {
+      try {
+        await copyText(hashCmdEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    document.getElementById("copyHashSnippet").addEventListener("click", async () => {
+      try {
+        await copyText(hashSnippetEl.textContent);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
     renderFind();
     renderFindInverse();
     renderFormat();
     renderDedupe();
     renderCompare();
+    renderHash();
   </script>
 </body>
 </html>
